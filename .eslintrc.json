@@ -1,8 +1,5 @@
-{
-  "parser":"react-scripts/node_modules/babel-eslint",
-  "extends": ["plugin:@next/next/recommended"]
-}
 
-// {  
-//    "extends": ["next/babel","next/core-web-vitals"]
-// }
+
+ {  
+   "extends": ["next/babel","next/core-web-vitals"]
+ }
