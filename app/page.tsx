@@ -28,24 +28,28 @@ export default function Home() {
   }, [isDarkMode]);
 
   const handleVideoSubmit = async (url: string) => {
-  const id = extractVideoId(url);
-  if (id) {
-    setVideoId(id);
-    setIsLoading(true);
-    setError(null);
-    try {
-      await fetchTranscript(id); // Ambil transkrip terlebih dahulu
-      await fetchSummary(id); // Kemudian ambil summary
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setError('Failed to fetch data. Please try again.');
-    } finally {
-      setIsLoading(false);
+    const id = extractVideoId(url);
+    if (id) {
+      setVideoId(id);
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Clear previous data when loading new video
+        setSummary(null);
+        setTranscript([]);
+        
+        await fetchTranscript(id);
+        await fetchSummary(id);
+      } catch (error: any) {
+        console.error('Error fetching data:', error);
+        setError(error.message || 'Failed to fetch data. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setError('Invalid YouTube URL. Please check the URL and try again.');
     }
-  } else {
-    setError('Invalid YouTube URL');
-  }
-};
+  };
 
   const extractVideoId = (url: string): string | null => {
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
@@ -63,6 +67,7 @@ export default function Home() {
       body: JSON.stringify({
         id: id, // Kirim videoId saja
       }),
+      next: { revalidate: 3600 }, // Enable ISR caching
     });
 
     if (!response.ok) {
@@ -87,6 +92,7 @@ export default function Home() {
       body: JSON.stringify({
         videoId: id, // Kirim videoId dalam body
       }),
+      next: { revalidate: 3600 }, // Enable ISR caching
     });
 
     if (!response.ok) {
@@ -95,7 +101,14 @@ export default function Home() {
 
     const data = await response.json();
     console.log('Transcript Data:', data); // Verifikasi data transkrip
-    setTranscript(data.segments || []);
+    // Ensure all timestamps are numbers
+    const processedSegments = data.segments?.map((segment: any) => ({
+      ...segment,
+      start: Number(segment.start),
+      end: Number(segment.end)
+    })) || [];
+    
+    setTranscript(processedSegments);
   } catch (error) {
     console.error('Error fetching transcript:', error);
     setTranscript([]);
@@ -133,24 +146,18 @@ export default function Home() {
                 <motion.a 
                   href="#features" 
                   className="nav-link"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                 >
                   Features
                 </motion.a>
                 <motion.a 
                   href="#how-it-works" 
                   className="nav-link"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                 >
                   How it Works
                 </motion.a>
                 <motion.a 
                   href="#about" 
                   className="nav-link"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                 >
                   About
                 </motion.a>
@@ -193,7 +200,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <div className="container max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-10 relative">
+      <div className="container max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 space-y-10 sm:space-y-16 relative">
         <motion.div 
           className="max-w-3xl mx-auto text-center space-y-6"
           initial={{ opacity: 0, y: 20 }}
@@ -212,7 +219,6 @@ export default function Home() {
           <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
             <motion.div 
               className="flex items-center gap-1 text-white/80"
-              whileHover={{ scale: 1.05 }}
             >
               <Sparkles className="w-4 h-4 text-purple-400" />
               AI-Powered Analysis
@@ -220,7 +226,6 @@ export default function Home() {
             <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-purple-600/50" />
             <motion.div 
               className="flex items-center gap-1 text-white/80"
-              whileHover={{ scale: 1.05 }}
             >
               <Sparkles className="w-4 h-4 text-blue-400" />
               Smart Summaries
@@ -228,7 +233,6 @@ export default function Home() {
             <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-purple-600/50" />
             <motion.div 
               className="flex items-center gap-1 text-white/80"
-              whileHover={{ scale: 1.05 }}
             >
               <Sparkles className="w-4 h-4 text-pink-400" />
               Interactive Chat
@@ -236,10 +240,10 @@ export default function Home() {
           </div>
         </motion.div>
 
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto mb-12">
           <LinkInput onSubmit={handleVideoSubmit} isLoading={isLoading} />
           {error && (
-            <p className="text-red-500 text-sm mt-2 text-center">{error}</p>
+            <p className="text-red-500 text-sm mt-4 text-center">{error}</p>
           )}
         </div>
 
@@ -248,25 +252,21 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="space-y-6"
+            className="space-y-10"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-6">
-              <motion.div
-                whileHover={{ scale: 1.01 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Card className="space-card overflow-hidden">
-                  <div className="p-4">
-                    <YouTubeEmbed videoId={videoId} onTimeUpdate={setCurrentTime} />
+            <div className="grid grid-cols-1 lg:grid-cols-[1.5fr,1fr] gap-8 lg:gap-10">
+              <motion.div layout className="h-full">
+                <Card className="space-card">
+                  <div className="relative w-full pt-[56.25%]">
+                    <div className="absolute inset-0">
+                      <YouTubeEmbed videoId={videoId} onTimeUpdate={setCurrentTime} />
+                    </div>
                   </div>
                 </Card>
               </motion.div>
+              
               {transcript && (
-                <motion.div 
-                  className="h-[400px]"
-                  whileHover={{ scale: 1.01 }}
-                  transition={{ duration: 0.2 }}
-                >
+                <motion.div layout className="h-full">
                   <VideoTranscript
                     transcript={transcript}
                     currentTime={currentTime}
@@ -276,25 +276,18 @@ export default function Home() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
               {summary && (
-                <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Card className="space-card overflow-hidden">
-                    <VideoSummary summary={summary} />
-                  </Card>
+                <motion.div layout>
+                  <VideoSummary summary={summary} />
                 </motion.div>
               )}
-              <motion.div
-                whileHover={{ scale: 1.01 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Card className="space-card overflow-hidden">
+              {/* Show chat component only when transcript is available */}
+              {transcript.length > 0 && (
+                <motion.div layout>
                   <ChatComponent videoId={videoId} />
-                </Card>
-              </motion.div>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}

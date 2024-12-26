@@ -73,19 +73,10 @@ export default function LinkInput({ onSubmit, isLoading }: LinkInputProps) {
               variant="ghost"
               size="icon"
               onClick={handlePaste}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
             >
               <Clipboard className="w-4 h-4" />
             </Button>
-            {isHovered && (
-              <motion.div
-                className="absolute inset-0 border-2 border-purple-400 rounded-md pointer-events-none"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              />
-            )}
           </div>
           <Button 
             type="submit"

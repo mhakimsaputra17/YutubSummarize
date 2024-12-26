@@ -43,15 +43,17 @@
   } */
 
 .glassmorphism {
-  @apply bg-black/40 backdrop-blur-lg border border-white/10;
+  @apply bg-black/40 backdrop-blur-lg border-b border-white/10;
   box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06),
-    inset 0 0 20px rgba(255, 255, 255, 0.05);
+    0 4px 24px -1px rgba(0, 0, 0, 0.2),
+    0 4px 8px -1px rgba(0, 0, 0, 0.1),
+    inset 0 0 32px rgba(255, 255, 255, 0.05);
 }
 
 .space-gradient {
   background: linear-gradient(to bottom, #0a0a0a, #1a0b2e, #1a0b2e);
+  min-height: 100vh;
+  @apply overflow-x-hidden;
 }
 
 .nebula-glow {
@@ -131,38 +133,24 @@
 }
 
 .space-card {
-  @apply bg-black/60 backdrop-blur-xl border border-purple-500/30 transition-all duration-300 text-white;
+  @apply bg-black/60 backdrop-blur-xl border border-purple-500/30 transition-all duration-300 text-white rounded-xl;
+  @apply p-6 md:p-8;
   box-shadow: 
-    0 0 20px rgba(103, 58, 183, 0.1),
-    inset 0 0 20px rgba(255, 255, 255, 0.05);
+    0 8px 32px rgba(103, 58, 183, 0.15),
+    0 4px 16px rgba(103, 58, 183, 0.1),
+    inset 0 0 32px rgba(255, 255, 255, 0.05);
 }
 
-.space-card:hover {
-  @apply border-purple-500/50;
-  transform: translateY(-2px);
-  box-shadow: 
-    0 0 30px rgba(103, 58, 183, 0.2),
-    inset 0 0 30px rgba(255, 255, 255, 0.07);
-}
+/* Hover effects have been removed in the previous update */
 
 .space-button {
   @apply bg-purple-600 hover:bg-purple-700 text-white transition-all duration-300;
   box-shadow: 0 0 15px rgba(103, 58, 183, 0.3);
 }
 
-.space-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 25px rgba(103, 58, 183, 0.5);
-}
-
 .space-input {
   @apply bg-black/50 border-purple-500/30 focus-visible:ring-purple-400 text-white placeholder-gray-400 transition-all duration-300;
   box-shadow: inset 0 0 10px rgba(103, 58, 183, 0.1);
-}
-
-.space-input:hover {
-  @apply border-purple-500/50;
-  box-shadow: inset 0 0 15px rgba(103, 58, 183, 0.2);
 }
 
 .nav-link {
@@ -174,17 +162,19 @@
   @apply absolute bottom-0 left-0 w-0 h-0.5 bg-purple-500 transition-all duration-300;
 }
 
-.nav-link:hover::after {
-  @apply w-full;
+.space-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(103, 58, 183, 0.5) rgba(0, 0, 0, 0.2);
 }
 
 .space-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .space-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
+  margin: 2px;
 }
 
 .space-scrollbar::-webkit-scrollbar-thumb {

@@ -20,7 +20,7 @@ const openai = new OpenAI({
 function chunkTranscript(text: string, maxChunkSize: number = 4000): string[] {
   const words = text.split(/\s+/);
   const chunks = [];
-  let currentChunk = [];
+  let currentChunk: string[] = [];
   let currentSize = 0;
 
   for (const word of words) {
@@ -128,8 +128,12 @@ ${summaries.map((s, i) => `Section ${i + 1}:\n${s}`).join('\n\n')}`;
       finalSummary = summaries[0];
     }
 
-    // Kembalikan hasil summary
-    return NextResponse.json({ summary: finalSummary });
+    const response = await NextResponse.json({ summary: finalSummary });
+
+    // Add cache headers
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    
+    return response;
   } catch (error) {
     console.error('Error generating summary:', error);
     return NextResponse.json({ error: 'Failed to generate summary' }, { status: 500 });

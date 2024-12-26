@@ -78,7 +78,12 @@ export async function POST(request: Request) {
     }));
 
     // Kembalikan judul dan transkrip yang diformat sebagai respons JSON
-    return NextResponse.json({ title, segments: formattedSegments });
+    const response = await NextResponse.json({ title, segments: formattedSegments });
+
+    // Add cache headers
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching transcript:', error);
     return NextResponse.json({ error: 'Failed to fetch transcript' }, { status: 500 });

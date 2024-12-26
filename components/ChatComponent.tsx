@@ -13,6 +13,7 @@ interface ChatComponentProps {
 interface Message {
   role: 'user' | 'ai'
   content: string
+  pending?: boolean
 }
 
 export default function ChatComponent({ videoId }: ChatComponentProps) {
@@ -42,34 +43,53 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
 
     const userMessage: Message = { role: 'user', content: input }
     setMessages((prev) => [...prev, userMessage])
+    
+    const pendingMessage: Message = { role: 'ai', content: '', pending: true }
+    setMessages((prev) => [...prev, pendingMessage])
+    
     setInput('')
     setIsTyping(true)
 
     try {
+      // Convert messages to format expected by API
+      const history = messages.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      }));
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoId, message: input }),
+        body: JSON.stringify({ 
+          videoId, 
+          question: input,
+          history // Send conversation history
+        }),
       })
+
+      if (!response.ok) {
+        throw new Error('Failed to get response')
+      }
+
       const data = await response.json()
       
-      // Simulate typing animation
-      let typedResponse = ''
-      const aiMessage: Message = { role: 'ai', content: '' }
-      setMessages((prev) => [...prev, aiMessage])
-
-      for (let i = 0; i < data.response.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 20)) // Adjust typing speed here
-        typedResponse += data.response[i]
-        setMessages((prev) => [
-          ...prev.slice(0, -1),
-          { ...prev[prev.length - 1], content: typedResponse }
-        ])
+      if (data.error) {
+        throw new Error(data.error)
       }
+
+      // Replace pending message with actual response
+      setMessages((prev) => [
+        ...prev.slice(0, -1),
+        { role: 'ai', content: data.answer }
+      ])
+
     } catch (error) {
       console.error('Error in chat:', error)
-      const errorMessage: Message = { role: 'ai', content: 'Sorry, I encountered an error. Please try again.' }
-      setMessages((prev) => [...prev, errorMessage])
+      // Replace pending message with error message
+      setMessages((prev) => [
+        ...prev.slice(0, -1),
+        { role: 'ai', content: 'Sorry, I encountered an error. Please try again.' }
+      ])
     } finally {
       setIsTyping(false)
     }
@@ -91,12 +111,9 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
         <ScrollArea className="h-[400px] p-4 space-scrollbar bg-black/60 backdrop-blur-xl" ref={scrollAreaRef}>
           <div className="space-y-4">
             {messages.map((message, index) => (
-              <motion.div
+              <div
                 key={index}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
               >
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-2 flex items-start gap-2 ${
@@ -110,9 +127,13 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
                   ) : (
                     <Bot className="w-5 h-5 mt-1 text-purple-400" />
                   )}
-                  <p className="font-space-grotesk">{message.content}</p>
+                  {message.pending ? (
+                    <span className="typing-animation font-space-grotesk">AI is thinking...</span>
+                  ) : (
+                    <p className="font-space-grotesk whitespace-pre-wrap">{message.content}</p>
+                  )}
                 </div>
-              </motion.div>
+              </div>
             ))}
             {isTyping && (
               <motion.div
@@ -142,7 +163,7 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
               >
                 <Paperclip className="w-4 h-4" />
               </Button>
@@ -150,7 +171,7 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
             <Button 
               type="submit" 
               size="icon"
-              className="bg-purple-600 hover:bg-purple-700 text-white rounded-full"
+              className="bg-purple-600 text-white rounded-full"
             >
               <Send className="w-4 h-4" />
             </Button>
