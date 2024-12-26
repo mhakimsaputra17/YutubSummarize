@@ -1,5 +1,5 @@
 {
-  "parser": "@babel/eslint-parser",
+  "parser":"react-scripts/node_modules/babel-eslint",
   "extends": ["plugin:@next/next/recommended"]
 }
 
