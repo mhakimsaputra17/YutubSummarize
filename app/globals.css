@@ -1,27 +1,198 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 1.2%;
+    --secondary: 222.2 47.4% 11.2%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 216 34% 17%;
+    --radius: 0.5rem;
+  }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    @apply bg-background text-foreground;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', sans-serif;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+/* * {
+    @apply border-border;
+  } */
+
+.glassmorphism {
+  @apply bg-black/40 backdrop-blur-lg border border-white/10;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+.space-gradient {
+  background: linear-gradient(to bottom, #0a0a0a, #1a0b2e, #1a0b2e);
+}
+
+.nebula-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(103, 58, 183, 0.3) 0%, rgba(103, 58, 183, 0) 70%);
+  pointer-events: none;
+  animation: nebula-float 20s ease-in-out infinite;
+  filter: blur(40px);
+}
+
+.gradient-text {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(
+    to right,
+    #fff 0%,
+    #818cf8 25%,
+    #c084fc 50%,
+    #818cf8 75%,
+    #fff 100%
+  );
+  background-size: 200% auto;
+  animation: shine 8s linear infinite;
+}
+
+.orbit-container {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  animation: orbit-rotate 20s linear infinite;
+}
+
+@keyframes orbit-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+@keyframes nebula-float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, -30px) scale(1.1);
+  }
+}
+
+.typing-animation {
+  display: inline-block;
+}
+
+.typing-animation::after {
+  content: '...';
+  animation: ellipsis 1.5s infinite;
+}
+
+@keyframes ellipsis {
+  0% {
+    content: '.';
+  }
+  33% {
+    content: '..';
+  }
+  66% {
+    content: '...';
+  }
+}
+
+.space-card {
+  @apply bg-black/60 backdrop-blur-xl border border-purple-500/30 transition-all duration-300 text-white;
+  box-shadow: 
+    0 0 20px rgba(103, 58, 183, 0.1),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+.space-card:hover {
+  @apply border-purple-500/50;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 0 30px rgba(103, 58, 183, 0.2),
+    inset 0 0 30px rgba(255, 255, 255, 0.07);
+}
+
+.space-button {
+  @apply bg-purple-600 hover:bg-purple-700 text-white transition-all duration-300;
+  box-shadow: 0 0 15px rgba(103, 58, 183, 0.3);
+}
+
+.space-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 25px rgba(103, 58, 183, 0.5);
+}
+
+.space-input {
+  @apply bg-black/50 border-purple-500/30 focus-visible:ring-purple-400 text-white placeholder-gray-400 transition-all duration-300;
+  box-shadow: inset 0 0 10px rgba(103, 58, 183, 0.1);
+}
+
+.space-input:hover {
+  @apply border-purple-500/50;
+  box-shadow: inset 0 0 15px rgba(103, 58, 183, 0.2);
+}
+
+.nav-link {
+  @apply px-4 py-2 text-gray-300 hover:text-white transition-all duration-300 relative;
+}
+
+.nav-link::after {
+  content: '';
+  @apply absolute bottom-0 left-0 w-0 h-0.5 bg-purple-500 transition-all duration-300;
+}
+
+.nav-link:hover::after {
+  @apply w-full;
+}
+
+.space-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.space-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.space-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(103, 58, 183, 0.5);
+  border-radius: 4px;
+}
+
+.space-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(103, 58, 183, 0.7);
+}
+
