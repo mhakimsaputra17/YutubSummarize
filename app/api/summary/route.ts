@@ -131,7 +131,7 @@ ${summaries.map((s, i) => `Section ${i + 1}:\n${s}`).join('\n\n')}`;
     const response = await NextResponse.json({ summary: finalSummary });
 
     // Add cache headers
-    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    // response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
     
     return response;
   } catch (error) {

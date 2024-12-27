@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     const response = await NextResponse.json({ title, segments: formattedSegments });
 
     // Add cache headers
-    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    // response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
     
     return response;
   } catch (error) {
