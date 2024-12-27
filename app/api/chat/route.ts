@@ -8,8 +8,8 @@ dotenv.config();
 
 // OpenAI configuration
 const token = process.env.OPENAI_API_KEY;
-const endpoint = process.env.OPENAI_API_ENDPOINT || "https://api.openai.com/v1";
-const modelName = process.env.OPENAI_MODEL_NAME || "gpt-3.5-turbo";
+const endpoint = process.env.OPENAI_API_ENDPOINT || "https://models.inference.ai.azure.com";
+const modelName = process.env.OPENAI_MODEL_NAME || "gpt-4o-mini";
 
 const openai = new OpenAI({
   apiKey: token,
