@@ -3,23 +3,25 @@ import { Innertube } from 'youtubei.js/web';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config();
 
-// OpenAI configuration
-const token = process.env.OPENAI_API_KEY;
-const endpoint = process.env.OPENAI_API_ENDPOINT || "https://models.inference.ai.azure.com";
-const modelName = process.env.OPENAI_MODEL_NAME || "gpt-4o-mini";
-
+// ----------------------------------
+// OpenAI Configuration
+// ----------------------------------
 const openai = new OpenAI({
-  apiKey: token,
-  baseURL: endpoint,
+  apiKey: process.env.OPENAI_API_KEY ?? '',
+  baseURL: process.env.OPENAI_API_ENDPOINT ?? 'https://models.inference.ai.azure.com',
 });
 
-// Function to chunk transcript
-function chunkTranscript(text: string, maxChunkSize: number = 3000): string[] {
+// Default model name
+const DEFAULT_MODEL_NAME = process.env.OPENAI_MODEL_NAME ?? 'gpt-4o-mini';
+
+// ----------------------------------
+// Utility function to chunk transcript
+// ----------------------------------
+function chunkTranscript(text: string, maxChunkSize = 3000): string[] {
   const words = text.split(/\s+/);
-  const chunks = [];
+  const chunks: string[] = [];
   let currentChunk: string[] = [];
   let currentSize = 0;
 
@@ -38,58 +40,65 @@ function chunkTranscript(text: string, maxChunkSize: number = 3000): string[] {
   if (currentChunk.length > 0) {
     chunks.push(currentChunk.join(' '));
   }
+
   return chunks;
 }
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
+// ----------------------------------
+// Main POST function
+// ----------------------------------
 export async function POST(request: Request) {
   try {
     const { videoId, question, history } = await request.json();
 
     if (!videoId || !question) {
-      return NextResponse.json({ error: 'Missing videoId or question' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing videoId or question' },
+        { status: 400 }
+      );
     }
 
     // Format conversation history
-    const conversationHistory: ChatMessage[] = history?.map((msg: any) => ({
+    const conversationHistory = (history ?? []).map((msg: any) => ({
       role: msg.role === 'user' ? 'user' : 'assistant',
-      content: msg.content
-    })) || [];
+      content: msg.content,
+    }));
 
-    // Initialize Innertube
+    // Initialize YouTube client
     const youtube = await Innertube.create({
       lang: 'en',
       location: 'US',
       retrieve_player: false,
     });
 
-    // Get video info and transcript
+    // Fetch video info and transcript
     const info = await youtube.getInfo(videoId);
     const transcriptData = await info.getTranscript();
 
-    if (!transcriptData?.transcript?.content?.body?.initial_segments) {
-      return NextResponse.json({ error: 'Transcript not available' }, { status: 404 });
+    // Periksa apakah transcript tersedia
+    const initialSegments = transcriptData?.transcript?.content?.body?.initial_segments;
+    if (!initialSegments) {
+      return NextResponse.json(
+        { error: 'Transcript not available' },
+        { status: 404 }
+      );
     }
 
-    // Format transcript
-    const transcriptText = transcriptData.transcript.content.body.initial_segments
+    // Menggabungkan semua segmen transcript menjadi string
+    const transcriptText = initialSegments
       .map((segment: any) => segment.snippet?.text?.trim())
       .join(' ');
 
-    // Split transcript into chunks
+    // Bagi transcript menjadi beberapa bagian (chunks) agar tidak melebihi batas token
     const chunks = chunkTranscript(transcriptText);
-    const answers = [];
+    const answers: string[] = [];
 
-    // Process each chunk with conversation context
+    // Gunakan setiap chunk sebagai konteks untuk ChatCompletion
     for (const chunk of chunks) {
       const prompt = `Based on this video transcript excerpt and the previous conversation, please answer the following question. If the answer isn't in this excerpt, respond with "NO_RELEVANT_INFO".
 
 Previous conversation:
-${conversationHistory.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n')}
+${conversationHistory.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n')}
 
 Transcript excerpt:
 ${chunk}
@@ -100,40 +109,39 @@ Answer:`;
 
       const response = await openai.chat.completions.create({
         messages: [
-          ...conversationHistory.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          })),
-          { role: "user", content: prompt }
+          ...conversationHistory,
+          { role: 'user', content: prompt },
         ],
-        model: modelName,
+        model: DEFAULT_MODEL_NAME,
       });
 
-      const answer = response.choices[0].message.content;
-      if (answer !== "NO_RELEVANT_INFO") {
-        answers.push(answer);
+      const answer = response.choices[0]?.message?.content ?? '';
+      if (answer && answer.trim() !== 'NO_RELEVANT_INFO') {
+        answers.push(answer.trim());
       }
     }
 
-    // Combine answers if multiple relevant chunks found
-    let finalAnswer;
+    // Jika ada lebih dari satu chunk relevan, gabungkan jawaban
+    let finalAnswer: string = '';
     if (answers.length > 1) {
       const combinePrompt = `Create a clear and concise answer by combining these relevant pieces of information about the question: ${question}
 
 Information pieces:
-${answers.map((a, i) => `Info ${i + 1}:\n${a}`).join('\n\n')}`;
+${answers
+  .map((a, i) => `Info ${i + 1}:\n${a}`)
+  .join('\n\n')}`;
 
       const finalResponse = await openai.chat.completions.create({
-        messages: [{ role: "user", content: combinePrompt }],
-        model: modelName,
+        messages: [{ role: 'user', content: combinePrompt }],
+        model: DEFAULT_MODEL_NAME,
       });
-      finalAnswer = finalResponse.choices[0].message.content;
+      finalAnswer = finalResponse.choices[0]?.message?.content ?? '';
     } else if (answers.length === 1) {
       finalAnswer = answers[0];
     } else {
-      // If no relevant information found in transcript, use ChatGPT directly
+      // Jika transcript tidak memiliki info relevan, gunakan jawaban umum
       const generalPrompt = `Based on our previous conversation:
-${conversationHistory.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n')}
+${conversationHistory.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n')}
 
 The user asked: "${question}"
 
@@ -149,26 +157,27 @@ Response:`;
 
       const generalResponse = await openai.chat.completions.create({
         messages: [
-          ...conversationHistory.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          })),
-          { role: "user", content: generalPrompt }
+          ...conversationHistory,
+          { role: 'user', content: generalPrompt },
         ],
-        model: modelName,
+        model: DEFAULT_MODEL_NAME,
       });
-      
-      finalAnswer = "⚠️ Note: This is a general answer as I couldn't find specific information in the video.\n\n" + 
-                   generalResponse.choices[0].message.content;
+
+      finalAnswer =
+        '⚠️ Note: This is a general answer as I couldn’t find specific information in the video.\n\n' +
+        (generalResponse.choices[0]?.message?.content ?? '');
     }
 
+    // Return response as JSON
     const response = NextResponse.json({ answer: finalAnswer });
     response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-    
     return response;
+    
   } catch (error) {
     console.error('Error processing chat request:', error);
-    return NextResponse.json({ error: 'Failed to process chat request' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to process chat request' },
+      { status: 500 }
+    );
   }
 }
-
