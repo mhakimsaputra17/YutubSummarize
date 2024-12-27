@@ -6,6 +6,26 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // ----------------------------------
+// Tipe data untuk request body
+// ----------------------------------
+interface RequestPayload {
+  videoId: string;
+  question: string;
+  history?: {
+    role: string;
+    content: string;
+  }[];
+}
+
+// ----------------------------------
+// Tipe data untuk percakapan
+// ----------------------------------
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+// ----------------------------------
 // OpenAI Configuration
 // ----------------------------------
 const openai = new OpenAI({
@@ -49,7 +69,8 @@ function chunkTranscript(text: string, maxChunkSize = 3000): string[] {
 // ----------------------------------
 export async function POST(request: Request) {
   try {
-    const { videoId, question, history } = await request.json();
+    // Pastikan kita menggunakan tipe RequestPayload agar tidak ada 'any' di parameter
+    const { videoId, question, history } = (await request.json()) as RequestPayload;
 
     if (!videoId || !question) {
       return NextResponse.json(
@@ -58,8 +79,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Format conversation history
-    const conversationHistory = (history ?? []).map((msg: any) => ({
+    // Format conversation history dengan tipe data yang sesuai
+    const conversationHistory: ChatMessage[] = (history ?? []).map((msg) => ({
       role: msg.role === 'user' ? 'user' : 'assistant',
       content: msg.content,
     }));
