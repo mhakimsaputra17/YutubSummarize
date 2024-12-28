@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import LinkInput from '@/components/LinkInput';
 import YouTubeEmbed from '@/components/YouTubeEmbed';
@@ -7,24 +8,36 @@ import VideoSummary from '@/components/VideoSummary';
 import VideoTranscript from '@/components/VideoTranscript';
 import ChatComponent from '@/components/ChatComponent';
 import ThemeToggle from '@/components/ThemeToggle';
-import StarField from '@/components/StarField';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Sparkles, Youtube, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+// Dynamically import StarField to avoid SSR
+const StarField = dynamic(() => import('@/components/StarField'), { ssr: false });
+
 export default function Home() {
   const [videoId, setVideoId] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<any[]>([]);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false); // Initialize as false
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(0); // Waktu video yang sedang diputar
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Handle dark mode initialization (client-side only)
+  useEffect(() => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const storedTheme = localStorage.getItem('theme');
+    const initialDarkMode = storedTheme === 'dark' || (!storedTheme && prefersDark);
+    setIsDarkMode(initialDarkMode);
+  }, []);
+
+  // Handle dark mode changes
   useEffect(() => {
     document.body.classList.toggle('dark', isDarkMode);
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
   const handleVideoSubmit = async (url: string) => {
@@ -37,7 +50,7 @@ export default function Home() {
         // Clear previous data when loading new video
         setSummary(null);
         setTranscript([]);
-        
+
         await fetchTranscript(id);
         await fetchSummary(id);
       } catch (error: any) {
@@ -58,62 +71,60 @@ export default function Home() {
   };
 
   const fetchSummary = async (id: string) => {
-  try {
-    const response = await fetch('/api/summary', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        id: id, // Kirim videoId saja
-      }),
-      next: { revalidate: 3600 }, // Enable ISR caching
-    });
+    try {
+      const response = await fetch('/api/summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: id, // Kirim videoId saja
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch summary');
+      if (!response.ok) {
+        throw new Error('Failed to fetch summary');
+      }
+
+      const data = await response.json();
+      setSummary(data.summary);
+    } catch (error) {
+      console.error('Error fetching summary:', error);
+      setSummary('Failed to fetch summary');
     }
-
-    const data = await response.json();
-    setSummary(data.summary);
-  } catch (error) {
-    console.error('Error fetching summary:', error);
-    setSummary('Failed to fetch summary');
-  }
-};
+  };
 
   const fetchTranscript = async (id: string) => {
-  try {
-    const response = await fetch('/api/transcript', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        videoId: id, // Kirim videoId dalam body
-      }),
-      next: { revalidate: 3600 }, // Enable ISR caching
-    });
+    try {
+      const response = await fetch('/api/transcript', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videoId: id, // Kirim videoId dalam body
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch transcript');
+      if (!response.ok) {
+        throw new Error('Failed to fetch transcript');
+      }
+
+      const data = await response.json();
+      console.log('Transcript Data:', data); // Verifikasi data transkrip
+      // Ensure all timestamps are numbers
+      const processedSegments = data.segments?.map((segment: any) => ({
+        ...segment,
+        start: Number(segment.start),
+        end: Number(segment.end),
+      })) || [];
+
+      setTranscript(processedSegments);
+    } catch (error) {
+      console.error('Error fetching transcript:', error);
+      setTranscript([]);
     }
-
-    const data = await response.json();
-    console.log('Transcript Data:', data); // Verifikasi data transkrip
-    // Ensure all timestamps are numbers
-    const processedSegments = data.segments?.map((segment: any) => ({
-      ...segment,
-      start: Number(segment.start),
-      end: Number(segment.end)
-    })) || [];
-    
-    setTranscript(processedSegments);
-  } catch (error) {
-    console.error('Error fetching transcript:', error);
-    setTranscript([]);
-  }
-};
+  };
 
   // Fungsi untuk mengubah waktu video
   const handleSeek = (time: number) => {
@@ -125,11 +136,11 @@ export default function Home() {
       <StarField />
       <div className="nebula-glow left-1/4 top-1/4" />
       <div className="nebula-glow right-1/4 bottom-1/4" />
-      
+
       <nav className="sticky top-0 w-full z-50 glassmorphism">
         <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
           <div className="flex items-center justify-between h-16">
-            <motion.div 
+            <motion.div
               className="flex items-center gap-3"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -141,24 +152,15 @@ export default function Home() {
                   ChatwithYoutube
                 </span>
               </div>
-              
+
               <div className="hidden md:flex items-center space-x-1">
-                <motion.a 
-                  href="#features" 
-                  className="nav-link"
-                >
+                <motion.a href="#features" className="nav-link">
                   Features
                 </motion.a>
-                <motion.a 
-                  href="#how-it-works" 
-                  className="nav-link"
-                >
+                <motion.a href="#how-it-works" className="nav-link">
                   How it Works
                 </motion.a>
-                <motion.a 
-                  href="#about" 
-                  className="nav-link"
-                >
+                <motion.a href="#about" className="nav-link">
                   About
                 </motion.a>
               </div>
@@ -172,11 +174,7 @@ export default function Home() {
                 className="md:hidden text-white"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
-                {isMenuOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
+                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>
             </div>
           </div>
@@ -190,9 +188,15 @@ export default function Home() {
                 className="md:hidden py-4"
               >
                 <div className="flex flex-col space-y-2">
-                  <a href="#features" className="nav-link">Features</a>
-                  <a href="#how-it-works" className="nav-link">How it Works</a>
-                  <a href="#about" className="nav-link">About</a>
+                  <a href="#features" className="nav-link">
+                    Features
+                  </a>
+                  <a href="#how-it-works" className="nav-link">
+                    How it Works
+                  </a>
+                  <a href="#about" className="nav-link">
+                    About
+                  </a>
                 </div>
               </motion.div>
             )}
@@ -201,7 +205,7 @@ export default function Home() {
       </nav>
 
       <div className="container max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 space-y-10 sm:space-y-16 relative">
-        <motion.div 
+        <motion.div
           className="max-w-3xl mx-auto text-center space-y-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -215,25 +219,19 @@ export default function Home() {
               Get YouTube transcript and use AI to summarize YouTube videos in one click
             </p>
           </div>
-          
+
           <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
-            <motion.div 
-              className="flex items-center gap-1 text-white/80"
-            >
+            <motion.div className="flex items-center gap-1 text-white/80">
               <Sparkles className="w-4 h-4 text-purple-400" />
               AI-Powered Analysis
             </motion.div>
             <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-purple-600/50" />
-            <motion.div 
-              className="flex items-center gap-1 text-white/80"
-            >
+            <motion.div className="flex items-center gap-1 text-white/80">
               <Sparkles className="w-4 h-4 text-blue-400" />
               Smart Summaries
             </motion.div>
             <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-purple-600/50" />
-            <motion.div 
-              className="flex items-center gap-1 text-white/80"
-            >
+            <motion.div className="flex items-center gap-1 text-white/80">
               <Sparkles className="w-4 h-4 text-pink-400" />
               Interactive Chat
             </motion.div>
@@ -243,12 +241,14 @@ export default function Home() {
         <div className="max-w-4xl mx-auto mb-12">
           <LinkInput onSubmit={handleVideoSubmit} isLoading={isLoading} />
           {error && (
-            <p className="text-red-500 text-sm mt-4 text-center">{error}</p>
+            <p className="text-red-500 text-sm mt-4 text-center" suppressHydrationWarning>
+              {error}
+            </p>
           )}
         </div>
 
         {videoId && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -264,7 +264,7 @@ export default function Home() {
                   </div>
                 </Card>
               </motion.div>
-              
+
               {transcript && (
                 <motion.div layout className="h-full">
                   <VideoTranscript

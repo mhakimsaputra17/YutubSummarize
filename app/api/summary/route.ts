@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
+import dotenv from 'dotenv';
 import { Innertube } from 'youtubei.js/web';
 import OpenAI from 'openai';
-import dotenv from 'dotenv';
+import redis from '@/utils/redis'; // Import Redis
 
 // Load environment variables from .env file
 dotenv.config();
@@ -49,6 +50,16 @@ export async function POST(request: Request) {
     // Validasi input
     if (!id) {
       return NextResponse.json({ error: 'Missing video ID' }, { status: 400 });
+    }
+
+    // Cek cache Redis untuk summary
+    const cachedSummary = await redis.get(`video:${id}:summary`);
+    if (cachedSummary) {
+      console.log('Summary retrieved from Redis cache');
+      const response = NextResponse.json(JSON.parse(cachedSummary));
+      // Tambahkan cache headers untuk client (1 jam)
+      response.headers.set('Cache-Control', 'public, max-age=3600');
+      return response;
     }
 
     // Inisialisasi Innertube dengan konfigurasi
@@ -128,11 +139,14 @@ ${summaries.map((s, i) => `Section ${i + 1}:\n${s}`).join('\n\n')}`;
       finalSummary = summaries[0];
     }
 
-    const response = await NextResponse.json({ summary: finalSummary });
+    // Simpan ke Redis cache dengan expiry 7 hari
+    await redis.set(`video:${id}:summary`, JSON.stringify({ summary: finalSummary }), 'EX', 60 * 60 * 24 * 7); // 7 hari
+    console.log('Summary cached in Redis');
 
-    // Add cache headers
-    // response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-    
+    // Kembalikan summary sebagai respons JSON
+    const response = NextResponse.json({ summary: finalSummary });
+    // Tambahkan cache headers untuk client (1 jam)
+    response.headers.set('Cache-Control', 'public, max-age=3600');
     return response;
   } catch (error) {
     console.error('Error generating summary:', error);

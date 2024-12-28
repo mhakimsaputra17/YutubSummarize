@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Innertube } from 'youtubei.js/web';
 import OpenAI from 'openai';
+import redis from '@/utils/redis'; // Import Redis
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -84,6 +85,13 @@ export async function POST(request: Request) {
       role: msg.role === 'user' ? 'user' : 'assistant',
       content: msg.content,
     }));
+
+    // Cek cache Redis untuk chat history
+    const cachedChatHistory = await redis.get(`chat:${videoId}:history`);
+    if (cachedChatHistory) {
+      console.log('Chat history retrieved from Redis cache');
+      conversationHistory.push(...JSON.parse(cachedChatHistory));
+    }
 
     // Initialize YouTube client
     const youtube = await Innertube.create({
@@ -189,9 +197,19 @@ Response:`;
         (generalResponse.choices[0]?.message?.content ?? '');
     }
 
+    // Simpan chat history ke Redis
+    const newChatHistory = [
+      ...conversationHistory,
+      { role: 'user', content: question },
+      { role: 'assistant', content: finalAnswer },
+    ];
+    await redis.set(`chat:${videoId}:history`, JSON.stringify(newChatHistory), 'EX', 60 * 60 * 24 * 7); // 7 hari
+    console.log('Chat history cached in Redis');
+
     // Return response as JSON
     const response = NextResponse.json({ answer: finalAnswer });
-    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    // Tambahkan cache headers untuk client (1 jam)
+    response.headers.set('Cache-Control', 'public, max-age=3600');
     return response;
     
   } catch (error) {

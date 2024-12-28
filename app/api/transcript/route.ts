@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Innertube } from 'youtubei.js/web';
+import redis from '@/utils/redis';
 
 // Fungsi untuk mengkonversi detik ke format mm:ss
 const formatTime = (seconds: number): string => {
@@ -17,6 +18,13 @@ export async function POST(request: Request) {
     // Validasi input
     if (!videoId) {
       return NextResponse.json({ error: 'Missing video ID' }, { status: 400 });
+    }
+
+    // Cek cache Redis untuk transcript
+    const cachedTranscript = await redis.get(`video:${videoId}:transcript`);
+    if (cachedTranscript) {
+      console.log('Transcript retrieved from cache');
+      return NextResponse.json(JSON.parse(cachedTranscript));
     }
 
     // Inisialisasi Innertube dengan konfigurasi
@@ -77,13 +85,15 @@ export async function POST(request: Request) {
       text: group.text.join(' ').replace(/\s+/g, ' '), // Gabungkan teks dan hilangkan spasi berlebih
     }));
 
-    // Kembalikan judul dan transkrip yang diformat sebagai respons JSON
-    const response = await NextResponse.json({ title, segments: formattedSegments });
+    // Data yang akan disimpan di cache dan dikembalikan sebagai respons
+    const responseData = { title, segments: formattedSegments };
 
-    // Add cache headers
-    // response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-    
-    return response;
+    // Simpan ke Redis cache dengan expiry 7 hari
+    await redis.set(`video:${videoId}:transcript`, JSON.stringify(responseData), 'EX', 60 * 60 * 24 * 7); // 7 hari
+    console.log('Transcript cached in Redis');
+
+    // Kembalikan judul dan transkrip yang diformat sebagai respons JSON
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('Error fetching transcript:', error);
     return NextResponse.json({ error: 'Failed to fetch transcript' }, { status: 500 });
