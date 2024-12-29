@@ -23,7 +23,7 @@ export default function LinkInput({ onSubmit, isLoading }: LinkInputProps) {
         variant: "destructive",
         title: "Error",
         description: "Please enter a YouTube URL",
-        icon: <AlertCircle className="h-5 w-5" />
+       // icon: <AlertCircle className="h-5 w-5" />
       })
       return
     }
