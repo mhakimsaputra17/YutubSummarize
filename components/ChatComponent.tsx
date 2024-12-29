@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { motion, useAnimation } from 'framer-motion'
 import { MessageSquare, Send, Bot, User, Paperclip } from 'lucide-react'
@@ -21,6 +21,7 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const controls = useAnimation()
 
   useEffect(() => {
@@ -51,7 +52,6 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
     setIsTyping(true)
 
     try {
-      // Convert messages to format expected by API
       const history = messages.map(msg => ({
         role: msg.role === 'user' ? 'user' : 'assistant',
         content: msg.content
@@ -63,7 +63,7 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
         body: JSON.stringify({ 
           videoId, 
           question: input,
-          history // Send conversation history
+          history
         }),
       })
 
@@ -77,7 +77,6 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
         throw new Error(data.error)
       }
 
-      // Replace pending message with actual response
       setMessages((prev) => [
         ...prev.slice(0, -1),
         { role: 'ai', content: data.answer }
@@ -85,7 +84,6 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
 
     } catch (error) {
       console.error('Error in chat:', error)
-      // Replace pending message with error message
       setMessages((prev) => [
         ...prev.slice(0, -1),
         { role: 'ai', content: 'Sorry, I encountered an error. Please try again.' }
@@ -95,20 +93,28 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
     }
   }
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value)
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={controls}
       className="space-card rounded-xl overflow-hidden"
     >
-      <CardHeader className="border-b border-purple-500/30 bg-black/50">
+      <CardHeader className="border-b border-purple-500/30 bg-gradient-to-r from-purple-900/50 to-black/50">
         <CardTitle className="flex items-center gap-2 text-white">
           <Bot className="w-5 h-5 text-purple-400" />
           Chat with AI
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[400px] p-4 space-scrollbar bg-black/60 backdrop-blur-xl" ref={scrollAreaRef}>
+        <ScrollArea className="h-[50vh] sm:h-[400px] p-4 space-scrollbar bg-black/60 backdrop-blur-xl" ref={scrollAreaRef}>
           <div className="space-y-4">
             {messages.map((message, index) => (
               <div
@@ -116,21 +122,21 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 flex items-start gap-2 ${
+                  className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-3 py-2 flex items-start gap-2 ${
                     message.role === 'user'
                       ? 'bg-purple-600/50 text-white ml-4'
                       : 'bg-gray-700/50 text-white mr-4'
                   }`}
                 >
                   {message.role === 'user' ? (
-                    <User className="w-5 h-5 mt-1 text-white" />
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 mt-1 text-white flex-shrink-0" />
                   ) : (
-                    <Bot className="w-5 h-5 mt-1 text-purple-400" />
+                    <Bot className="w-4 h-4 sm:w-5 sm:h-5 mt-1 text-purple-400 flex-shrink-0" />
                   )}
                   {message.pending ? (
-                    <span className="typing-animation font-space-grotesk">AI is thinking...</span>
+                    <span className="typing-animation font-space-grotesk text-sm sm:text-base">AI is thinking...</span>
                   ) : (
-                    <p className="font-space-grotesk whitespace-pre-wrap">{message.content}</p>
+                    <p className="font-space-grotesk whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
                   )}
                 </div>
               </div>
@@ -150,20 +156,21 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
           </div>
         </ScrollArea>
         <div className="border-t border-purple-500/30 p-4 bg-black/60 backdrop-blur-xl">
-          <form onSubmit={handleSubmit} className="flex gap-2">
+          <form onSubmit={handleSubmit} className="flex gap-2 items-end">
             <div className="relative flex-grow">
-              <Input
-                type="text"
+              <Textarea
+                ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInputChange}
                 placeholder="Ask anything about the video..."
-                className="w-full bg-black/50 border-purple-500/30 focus-visible:ring-purple-400 text-white placeholder-gray-400 pr-10 font-space-grotesk"
+                className="w-full bg-black/50 border-purple-500/30 focus-visible:ring-purple-400 text-white placeholder-gray-400 pr-10 font-space-grotesk resize-none overflow-hidden min-h-[40px]"
+                style={{ height: '40px' }}
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute right-2 bottom-2 text-gray-400 hover:text-white"
               >
                 <Paperclip className="w-4 h-4" />
               </Button>
@@ -171,7 +178,7 @@ export default function ChatComponent({ videoId }: ChatComponentProps) {
             <Button 
               type="submit" 
               size="icon"
-              className="bg-purple-600 text-white rounded-full"
+              className="bg-purple-600 text-white rounded-full h-10 w-10 flex-shrink-0"
             >
               <Send className="w-4 h-4" />
             </Button>

@@ -186,3 +186,26 @@
   background: rgba(103, 58, 183, 0.7);
 }
 
+.space-textarea {
+  @apply bg-black/50 border-purple-500/30 focus-visible:ring-purple-400 text-white placeholder-gray-400 transition-all duration-300;
+  box-shadow: inset 0 0 10px rgba(103, 58, 183, 0.1);
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+
+  .space-card {
+    @apply p-3 md:p-4;
+  }
+
+  .chat-message {
+    @apply text-sm;
+  }
+
+  .space-textarea {
+    @apply text-sm;
+  }
+}
+

@@ -1,60 +1,62 @@
 import { useState, useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
-import { Clock, Download, Layout, Settings, Search } from 'lucide-react';
+import { Clock, Download, Layout, Settings, Search, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 
 interface TranscriptSegment {
-  timeRange: string; // Format: "00:00 - 00:30"
+  timeRange: string;
   text: string;
-  startTime: number; // Waktu mulai dalam detik
-  endTime: number; // Waktu selesai dalam detik
+  startTime: number;
+  endTime: number;
 }
 
 interface VideoTranscriptProps {
   transcript: TranscriptSegment[];
-  currentTime: number; // Waktu video yang sedang diputar
-  onSeek: (time: number) => void; // Fungsi untuk mengubah waktu video
+  currentTime: number;
+  onSeek: (time: number) => void;
 }
 
 export default function VideoTranscript({ transcript, currentTime, onSeek }: VideoTranscriptProps) {
   const [autoScroll, setAutoScroll] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const activeRef = useRef<HTMLDivElement | null>(null);
+  const activeSegmentIndex = useRef(-1);
+  const activeSegmentRef = useRef<HTMLDivElement | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Filter segmen berdasarkan query pencarian
   const filteredSegments = transcript.filter((segment) =>
     segment.text.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Fungsi untuk mendapatkan segmen aktif
   const getActiveSegment = () => {
-    return filteredSegments.find(
+    const active = filteredSegments.findIndex(
       (segment) => currentTime >= segment.startTime && currentTime < segment.endTime
     );
+    activeSegmentIndex.current = active;
+    return active;
   };
 
-  // Effect untuk auto-scroll
   useEffect(() => {
-    if (autoScroll && activeRef.current) {
-      activeRef.current.scrollIntoView({
+    getActiveSegment();
+  }, [currentTime, filteredSegments]);
+
+  useEffect(() => {
+    if (autoScroll && activeSegmentRef.current && scrollAreaRef.current) {
+      activeSegmentRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
       });
     }
   }, [currentTime, autoScroll]);
 
-  // Fungsi untuk mendownload transkrip
   const downloadTranscript = () => {
     const header = `Transcript for Video\n\n`;
     const content = transcript
       .map((segment) => `${segment.timeRange}\n${segment.text}`)
       .join('\n\n');
-
     const finalContent = header + content;
-
     const blob = new Blob([finalContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -66,25 +68,27 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
 
   return (
     <motion.div
-      className="space-card h-[600px] overflow-hidden" // Fixed height
+      className="space-card h-[600px] overflow-hidden rounded-xl shadow-lg"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       <div className="flex flex-col h-full">
-        {/* Header Section */}
-        <div className="flex-none p-4 border-b border-purple-500/30 bg-black/50">
+        <div className="flex-none p-4 border-b border-purple-500/30 bg-gradient-to-r from-purple-900/50 to-black/50">
           <div className="flex items-center justify-between mb-4">
-            <div className="text-lg font-semibold text-white font-orbitron">Transcript</div>
+            <div className="text-lg font-semibold text-white font-orbitron flex items-center">
+              <MessageSquare className="w-5 h-5 mr-2 text-purple-400" />
+              Transcript
+            </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="text-gray-400">
+              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-purple-400 transition-colors">
                 <Layout className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="text-gray-400">
+              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-purple-400 transition-colors">
                 <Clock className="w-4 h-4" />
               </Button>
               <div className="flex items-center gap-2 px-2 text-sm text-gray-400">
-                Auto-scroll
+                <span className="hidden sm:inline">Auto-scroll</span>
                 <Switch
                   checked={autoScroll}
                   onCheckedChange={setAutoScroll}
@@ -94,12 +98,12 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-gray-400"
+                className="text-gray-400 hover:text-purple-400 transition-colors"
                 onClick={downloadTranscript}
               >
                 <Download className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="text-gray-400">
+              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-purple-400 transition-colors">
                 <Settings className="w-4 h-4" />
               </Button>
             </div>
@@ -116,31 +120,23 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
           </div>
         </div>
 
-        {/* Transcript Content with ScrollArea */}
         <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full">
+          <ScrollArea className="h-full" ref={scrollAreaRef}>
             <div className="p-4">
               {filteredSegments.length > 0 ? (
                 <div className="space-y-2">
                   {filteredSegments.map((segment, index) => (
                     <motion.div
                       key={index}
-                      ref={
-                        currentTime >= segment.startTime && currentTime < segment.endTime
-                          ? (ref) => {
-                              activeRef.current = ref;
-                            }
-                          : null
-                      }
+                      ref={index === activeSegmentIndex.current ? activeSegmentRef : null}
                       className={`p-3 rounded-lg cursor-pointer transition-all ${
-                        currentTime >= segment.startTime && currentTime <= segment.endTime
-                          ? 'bg-purple-500/20'
-                          : 'hover:bg-purple-500/10'
+                        index === activeSegmentIndex.current ? 'bg-purple-500/20 shadow-md' : 'hover:bg-purple-500/10'
                       }`}
                       onClick={() => onSeek(segment.startTime)}
                     >
-                      <p className="text-sm text-white/90 mb-1">{segment.text}</p>
-                      <span className="text-xs text-purple-400 font-mono">
+                      <p className="text-sm text-white/90 mb-1 line-clamp-2">{segment.text}</p>
+                      <span className="text-xs text-purple-400 font-mono flex items-center">
+                        <Clock className="w-3 h-3 mr-1" />
                         {segment.timeRange}
                       </span>
                     </motion.div>
@@ -158,3 +154,4 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
     </motion.div>
   );
 }
+

@@ -5,14 +5,13 @@ import { Sparkles, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface VideoSummaryProps {
-  summary: string; // Prop untuk menerima summary langsung
+  summary: string;
 }
 
 export default function VideoSummary({ summary }: VideoSummaryProps) {
   const [isCopied, setIsCopied] = useState(false);
   const controls = useAnimation();
 
-  // Animasi komponen
   useEffect(() => {
     controls.start({
       opacity: 1,
@@ -21,22 +20,16 @@ export default function VideoSummary({ summary }: VideoSummaryProps) {
     });
   }, [controls]);
 
-  // Fungsi untuk menyalin summary
   const handleCopy = async () => {
     await navigator.clipboard.writeText(summary);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  // Format teks summary menjadi HTML
   const formatSummary = (text: string) => {
     try {
-      // Fungsi untuk membersihkan dan memformat teks
       const processText = (text: string) => {
-        // Hapus asterisk
         text = text.replace(/\*\*/g, '');
-        
-        // Ganti emoji text dengan actual emoji
         const emojiMap: { [key: string]: string } = {
           ':bulb:': '💡',
           ':dart:': '🎯',
@@ -45,12 +38,10 @@ export default function VideoSummary({ summary }: VideoSummaryProps) {
           ':sparkles:': '✨',
           '-': '•'
         };
-
         Object.entries(emojiMap).forEach(([text, emoji]) => {
           const regex = new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
           text = text.replace(regex, emoji);
         });
-
         return text.trim();
       };
 
@@ -60,44 +51,32 @@ export default function VideoSummary({ summary }: VideoSummaryProps) {
 
       return paragraphs
         .map((paragraph) => {
-          try {
-            // Heading dengan nomor
-            if (/^\d+\.\s/.test(paragraph)) {
-              const number = paragraph.match(/^\d+/)?.[0] || '';
-              const content = paragraph.replace(/^\d+\.\s/, '');
-              return `<div class="mb-4">
-                <h3 class="text-lg font-semibold text-gradient-purple mb-2 flex items-center gap-2">
-                  <span class="bg-purple-500/20 rounded-full px-3 py-1">${number}</span>
-                  ${content}
-                </h3>
-              </div>`;
-            }
-
-            // Format berdasarkan emoji di awal
-            if (/^(💡|🎯|📌|👉|✨)/.test(paragraph)) {
-              const [emoji, ...content] = paragraph.split(' ');
-              return `<div class="mb-3 bg-purple-500/10 rounded-lg p-3">
-                <h4 class="text-md font-medium text-white flex items-center gap-2">
-                  <span class="text-xl">${emoji}</span>
-                  ${content.join(' ')}
-                </h4>
-              </div>`;
-            }
-
-            // List item
-            if (paragraph.startsWith('•')) {
-              return `<div class="flex items-start gap-2 mb-2 ml-4">
-                <span class="text-purple-400 mt-1">•</span>
-                <p class="text-gray-200">${paragraph.slice(1).trim()}</p>
-              </div>`;
-            }
-
-            // Default paragraph
-            return `<p class="text-gray-200 mb-4 leading-relaxed">${paragraph}</p>`;
-          } catch (err) {
-            console.error('Error processing paragraph:', err);
-            return `<p class="text-gray-200 mb-4">${paragraph}</p>`;
+          if (/^\d+\.\s/.test(paragraph)) {
+            const number = paragraph.match(/^\d+/)?.[0] || '';
+            const content = paragraph.replace(/^\d+\.\s/, '');
+            return `<div class="mb-4">
+              <h3 class="text-lg font-semibold text-gradient-purple mb-2 flex items-center gap-2">
+                <span class="bg-purple-500/20 rounded-full px-3 py-1">${number}</span>
+                ${content}
+              </h3>
+            </div>`;
           }
+          if (/^(💡|🎯|📌|👉|✨)/.test(paragraph)) {
+            const [emoji, ...content] = paragraph.split(' ');
+            return `<div class="mb-3 bg-purple-500/10 rounded-lg p-3">
+              <h4 class="text-md font-medium text-white flex items-center gap-2">
+                <span class="text-xl">${emoji}</span>
+                ${content.join(' ')}
+              </h4>
+            </div>`;
+          }
+          if (paragraph.startsWith('•')) {
+            return `<div class="flex items-start gap-2 mb-2 ml-4">
+              <span class="text-purple-400 mt-1">•</span>
+              <p class="text-gray-200">${paragraph.slice(1).trim()}</p>
+            </div>`;
+          }
+          return `<p class="text-gray-200 mb-4 leading-relaxed">${paragraph}</p>`;
         })
         .join('');
     } catch (err) {
@@ -143,3 +122,4 @@ export default function VideoSummary({ summary }: VideoSummaryProps) {
     </motion.div>
   );
 }
+

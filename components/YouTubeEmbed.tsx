@@ -68,3 +68,4 @@ export default function YouTubeEmbed({ videoId, onTimeUpdate }: YouTubeEmbedProp
     </motion.div>
   );
 }
+

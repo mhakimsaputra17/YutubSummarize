@@ -1,17 +1,16 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import LinkInput from '@/components/LinkInput';
 import YouTubeEmbed from '@/components/YouTubeEmbed';
 import VideoSummary from '@/components/VideoSummary';
 import VideoTranscript from '@/components/VideoTranscript';
 import ChatComponent from '@/components/ChatComponent';
-import ThemeToggle from '@/components/ThemeToggle';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
-import { Sparkles, Youtube, Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
+import { Toaster } from "@/components/ui/toaster"
 
 // Dynamically import StarField to avoid SSR
 const StarField = dynamic(() => import('@/components/StarField'), { ssr: false });
@@ -20,25 +19,9 @@ export default function Home() {
   const [videoId, setVideoId] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<any[]>([]);
-  const [isDarkMode, setIsDarkMode] = useState(false); // Initialize as false
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0); // Waktu video yang sedang diputar
+  const [currentTime, setCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Handle dark mode initialization (client-side only)
-  useEffect(() => {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const storedTheme = localStorage.getItem('theme');
-    const initialDarkMode = storedTheme === 'dark' || (!storedTheme && prefersDark);
-    setIsDarkMode(initialDarkMode);
-  }, []);
-
-  // Handle dark mode changes
-  useEffect(() => {
-    document.body.classList.toggle('dark', isDarkMode);
-    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-  }, [isDarkMode]);
 
   const handleVideoSubmit = async (url: string) => {
     const id = extractVideoId(url);
@@ -47,10 +30,8 @@ export default function Home() {
       setIsLoading(true);
       setError(null);
       try {
-        // Clear previous data when loading new video
         setSummary(null);
         setTranscript([]);
-
         await fetchTranscript(id);
         await fetchSummary(id);
       } catch (error: any) {
@@ -74,18 +55,10 @@ export default function Home() {
     try {
       const response = await fetch('/api/summary', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: id, // Kirim videoId saja
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch summary');
-      }
-
+      if (!response.ok) throw new Error('Failed to fetch summary');
       const data = await response.json();
       setSummary(data.summary);
     } catch (error) {
@@ -98,27 +71,16 @@ export default function Home() {
     try {
       const response = await fetch('/api/transcript', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          videoId: id, // Kirim videoId dalam body
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId: id }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch transcript');
-      }
-
+      if (!response.ok) throw new Error('Failed to fetch transcript');
       const data = await response.json();
-      console.log('Transcript Data:', data); // Verifikasi data transkrip
-      // Ensure all timestamps are numbers
       const processedSegments = data.segments?.map((segment: any) => ({
         ...segment,
         start: Number(segment.start),
         end: Number(segment.end),
       })) || [];
-
       setTranscript(processedSegments);
     } catch (error) {
       console.error('Error fetching transcript:', error);
@@ -126,83 +88,15 @@ export default function Home() {
     }
   };
 
-  // Fungsi untuk mengubah waktu video
   const handleSeek = (time: number) => {
     setCurrentTime(time);
   };
 
   return (
-    <main className="min-h-screen space-gradient overflow-hidden relative">
+    <>
       <StarField />
       <div className="nebula-glow left-1/4 top-1/4" />
       <div className="nebula-glow right-1/4 bottom-1/4" />
-
-      <nav className="sticky top-0 w-full z-50 glassmorphism">
-        <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
-          <div className="flex items-center justify-between h-16">
-            <motion.div
-              className="flex items-center gap-3"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="flex items-center gap-2">
-                <Youtube className="w-6 h-6 text-purple-400" />
-                <span className="gradient-text text-xl font-bold hidden sm:inline">
-                  ChatwithYoutube
-                </span>
-              </div>
-
-              <div className="hidden md:flex items-center space-x-1">
-                <motion.a href="#features" className="nav-link">
-                  Features
-                </motion.a>
-                <motion.a href="#how-it-works" className="nav-link">
-                  How it Works
-                </motion.a>
-                <motion.a href="#about" className="nav-link">
-                  About
-                </motion.a>
-              </div>
-            </motion.div>
-
-            <div className="flex items-center gap-4">
-              <ThemeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden text-white"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-              >
-                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </Button>
-            </div>
-          </div>
-
-          <AnimatePresence>
-            {isMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="md:hidden py-4"
-              >
-                <div className="flex flex-col space-y-2">
-                  <a href="#features" className="nav-link">
-                    Features
-                  </a>
-                  <a href="#how-it-works" className="nav-link">
-                    How it Works
-                  </a>
-                  <a href="#about" className="nav-link">
-                    About
-                  </a>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </nav>
 
       <div className="container max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 space-y-10 sm:space-y-16 relative">
         <motion.div
@@ -265,7 +159,7 @@ export default function Home() {
                 </Card>
               </motion.div>
 
-              {transcript && (
+              {transcript.length > 0 && (
                 <motion.div layout className="h-full">
                   <VideoTranscript
                     transcript={transcript}
@@ -282,7 +176,6 @@ export default function Home() {
                   <VideoSummary summary={summary} />
                 </motion.div>
               )}
-              {/* Show chat component only when transcript is available */}
               {transcript.length > 0 && (
                 <motion.div layout>
                   <ChatComponent videoId={videoId} />
@@ -292,6 +185,8 @@ export default function Home() {
           </motion.div>
         )}
       </div>
-    </main>
+      <Toaster />
+    </>
   );
 }
+
