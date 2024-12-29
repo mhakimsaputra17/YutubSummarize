@@ -1,53 +1,53 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Search, Youtube, Clipboard, AlertCircle } from 'lucide-react'
-import { motion } from 'framer-motion'
-import { Card } from '@/components/ui/card'
-import { useToast } from "@/app/hooks/use-toast"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search, Youtube, Clipboard, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Card } from '@/components/ui/card';
+import { useToast } from "@/app/hooks/use-toast";
 
 interface LinkInputProps {
-  onSubmit: (url: string) => void
-  isLoading: boolean
+  onSubmit: (url: string) => void;
+  isLoading: boolean;
 }
 
 export default function LinkInput({ onSubmit, isLoading }: LinkInputProps) {
-  const [url, setUrl] = useState('')
-  const [isHovered, setIsHovered] = useState(false)
-  const { toast } = useToast()
+  const [url, setUrl] = useState('');
+  const [isHovered, setIsHovered] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!url.trim()) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Please enter a YouTube URL",
-       // icon: <AlertCircle className="h-5 w-5" />
-      })
-      return
+        icon: <AlertCircle className="h-5 w-5" />, // Menggunakan properti icon
+      });
+      return;
     }
-    onSubmit(url)
-  }
+    onSubmit(url);
+  };
 
   const handlePaste = async () => {
     try {
-      const text = await navigator.clipboard.readText()
-      setUrl(text)
+      const text = await navigator.clipboard.readText();
+      setUrl(text);
     } catch (err) {
-      console.error('Failed to read clipboard contents: ', err)
+      console.error('Failed to read clipboard contents: ', err);
       toast({
         variant: "destructive",
         title: "Clipboard Error",
         description: "Failed to paste from clipboard. Please try manually entering the URL.",
-        icon: <AlertCircle className="h-5 w-5" />
-      })
+        icon: <AlertCircle className="h-5 w-5" />, // Menggunakan properti icon
+      });
     }
-  }
+  };
 
   return (
     <Card className="space-card overflow-hidden">
-      <motion.form 
+      <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -55,7 +55,7 @@ export default function LinkInput({ onSubmit, isLoading }: LinkInputProps) {
         className="p-4 sm:p-6"
       >
         <div className="flex flex-col sm:flex-row gap-4">
-          <div 
+          <div
             className="relative flex-grow"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -85,7 +85,7 @@ export default function LinkInput({ onSubmit, isLoading }: LinkInputProps) {
               />
             )}
           </div>
-          <Button 
+          <Button
             type="submit"
             className="space-button w-full sm:w-auto"
             disabled={isLoading}
@@ -106,6 +106,5 @@ export default function LinkInput({ onSubmit, isLoading }: LinkInputProps) {
         </div>
       </motion.form>
     </Card>
-  )
+  );
 }
-
