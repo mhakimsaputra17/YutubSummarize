@@ -26,10 +26,12 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
   const activeSegmentRef = useRef<HTMLDivElement | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  // Filter transcript segments based on search query
   const filteredSegments = transcript.filter((segment) =>
     segment.text.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Get the active segment based on currentTime
   const getActiveSegment = () => {
     const active = filteredSegments.findIndex(
       (segment) => currentTime >= segment.startTime && currentTime < segment.endTime
@@ -38,10 +40,12 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
     return active;
   };
 
+  // Update active segment when currentTime or filteredSegments changes
   useEffect(() => {
     getActiveSegment();
   }, [currentTime, filteredSegments]);
 
+  // Auto-scroll to the active segment if autoScroll is enabled
   useEffect(() => {
     if (autoScroll && activeSegmentRef.current && scrollAreaRef.current) {
       activeSegmentRef.current.scrollIntoView({
@@ -51,6 +55,7 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
     }
   }, [currentTime, autoScroll]);
 
+  // Function to download the transcript as a text file
   const downloadTranscript = () => {
     const header = `Transcript for Video\n\n`;
     const content = transcript
@@ -74,6 +79,7 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
       transition={{ duration: 0.5 }}
     >
       <div className="flex flex-col h-full">
+        {/* Header Section */}
         <div className="flex-none p-4 border-b border-purple-500/30 bg-gradient-to-r from-purple-900/50 to-black/50">
           <div className="flex items-center justify-between mb-4">
             <div className="text-lg font-semibold text-white font-orbitron flex items-center">
@@ -108,6 +114,7 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
               </Button>
             </div>
           </div>
+          {/* Search Input */}
           <div className="relative">
             <Input
               type="text"
@@ -120,6 +127,7 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
           </div>
         </div>
 
+        {/* Transcript Content */}
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
             <div className="p-4">
@@ -134,7 +142,7 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
                       }`}
                       onClick={() => onSeek(segment.startTime)}
                     >
-                      <p className="text-sm text-white/90 mb-1 line-clamp-2">{segment.text}</p>
+                      <p className="text-sm text-white/90 mb-1">{segment.text}</p>
                       <span className="text-xs text-purple-400 font-mono flex items-center">
                         <Clock className="w-3 h-3 mr-1" />
                         {segment.timeRange}
@@ -154,4 +162,3 @@ export default function VideoTranscript({ transcript, currentTime, onSeek }: Vid
     </motion.div>
   );
 }
-
